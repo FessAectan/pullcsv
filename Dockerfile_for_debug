@@ -1,0 +1,35 @@
+FROM golang:1.20-alpine3.19 AS build
+
+ENV CGO_ENABLED 0
+ENV DELETE_CRON="1 */1 * * *"
+ENV DOWNLOAD_CRON="*/2 * * * *"
+ENV DOWNLOAD_FROM="rsync://USERNAME@server-name/pullcsv/some-files/*_TODAY_* rsync://USERNAME@server-name/pullcsv-prod/some_path/some_part_of_the_file*_TODAY_*"
+ENV DOWNLOAD_TO="/path_in_pod/csv/in/ /path_in_pod/stocks/in/"
+ENV STAND_NAME=dev100500
+ENV POD_NAME=some-pod-name-5448486d5c-qjpvq
+
+
+# Allow Go to retreive the dependencies for the build step
+RUN apk add --update --no-cache git \
+    && echo "10.210.1.42 server-name" >> /etc/hosts \
+    && for i in $DOWNLOAD_TO; do mkdir -p $i; done
+
+WORKDIR /debugging/
+ADD . /debugging/
+
+RUN go build -o /debugging/srv cmd/pullcsv/main.go
+
+# Get Delve from a GOPATH not from a Go Modules project
+WORKDIR /go/src/
+RUN go install github.com/go-delve/delve/cmd/dlv@latest
+
+# final stage
+FROM alpine:3.19
+
+WORKDIR /
+COPY --from=build /debugging/srv /
+COPY --from=build /go/bin/dlv /
+
+EXPOSE 8080 40000
+
+CMD ["/dlv", "--listen=:40000", "--headless=true", "--api-version=2", "exec", "/srv"]

@@ -1,0 +1,10 @@
+.git*
+README*
+forTests
+test*
+Dockerfil*
+go*
+*.go
+README.md
+.env
+docker-compose.yaml

@@ -1,0 +1,31 @@
+services:
+  pullcsv:
+    platform: linux/amd64
+    image: pullcsv:latest
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM --platform=linux/amd64 golang:1.20.2-bullseye
+        COPY ./ /runapp/
+        WORKDIR /runapp
+        RUN apt-get update && apt-get install rsync -y \
+        && go build -o pullcsv cmd/pullcsv/main.go \
+        && chmod +x pullcsv
+    command:
+      - /bin/bash
+      - -c
+      - |
+        echo "10.210.1.42 server-name" >> /etc/hosts
+        . /app/.env
+        /runapp/pullcsv
+    volumes:
+      - ./:/app
+    ports:
+      - "8080:8080"
+    environment:
+      DELETE_CRON: "1 */1 * * *"
+      DOWNLOAD_CRON: "*/2 * * * *"
+      DOWNLOAD_FROM: "rsync://USERNAME@server-name/pullcsv/some-files/*_TODAY_* rsync://USERNAME@server-name/pullcsv-prod/some_path/some_part_of_the_file*_TODAY_*"
+      DOWNLOAD_TO: "/path_in_pod/csv/in/ /path_in_pod/stocks/in/"
+      STAND_NAME: "dev100500"
+      POD_NAME: "some-pod-name-5448486d5c-qjpvq"

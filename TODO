@@ -1,0 +1,4 @@
+TODO
+1. refactor pullcsv cronjob
+2. Move(tmpFile, fileName) //unhandled error - fix it! TruncateExcludeFile - also
+3. add k8s probes
